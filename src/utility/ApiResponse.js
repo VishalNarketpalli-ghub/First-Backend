@@ -7,3 +7,5 @@ class ApiResponse {
         //status code should be less than 400
     }
 }
+
+export { ApiResponse }
