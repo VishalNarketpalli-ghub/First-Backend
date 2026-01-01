@@ -1,6 +1,6 @@
 import { asyncHandler } from '../utility/asyncHandler.js';
 
-import { ApiError, apiError } from "../utility/ApiError.js";
+import { ApiError } from "../utility/ApiError.js";
 
 import { User } from "../models/user.module.js";
 
@@ -9,66 +9,78 @@ import { uploadOnCloudinary } from "../utility/cloudinary.js";
 import { ApiResponse } from '../utility/ApiResponse.js';
 
 const registerUser = asyncHandler(async (req, res) => {
-    //take user details from frontend
-    //validation - not empty
-    //check if user already exists : username, email
-    //check for img, avatar
-    //upload them to cloudinary , avatar
-    //create user obj - create user entry in db
-    //remove pswd and refresh token field from from response
-    //check for uesr creation
-    //return res
-    const { fullName, email, userName, password } = req.body;
-    console.log("email : ", email);
+    // get user details from frontend
+    // validation - not empty
+    // check if user already exists: username, email
+    // check for images, check for avatar
+    // upload them to cloudinary, avatar
+    // create user object - create entry in db
+    // remove password and refresh token field from response
+    // check for user creation
+    // return res
+
+
+    const { fullName, email, username, password } = req.body
+    //console.log("email: ", email);
 
     if (
-        [fullName, email, userName, Password].some((field) =>
-            field?.trim() === "")
+        [fullName, email, username, password].some((field) => field?.trim() === "")
     ) {
-        throw new ApiError(400, "All files are required");
+        throw new ApiError(400, "All fields are required")
     }
 
-    const existingUser = User.findOne({
-        $or: [{ userName }, { email }]
+    const existedUser = await User.findOne({
+        $or: [{ username }, { email }]
     })
 
-    if (existingUser) {
-        throw new ApiError(408, "User with username or email already exist");
+    if (existedUser) {
+        throw new ApiError(409, "User with email or username already exists")
+    }
+    //console.log(req.files);
+
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path
     }
 
-    const avatarLocalpath = req.field?.avatar[0]?.path;
-    const coverImageLocalPath = req.file?.coverImage[0]?.path;
-
-    if (!avatarLocalpath) {
-        throw new ApiError(400, "Avatar file is required");
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is required")
     }
 
-    const avatar = await uploadOnCloudinary(avatarLocalpath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
     if (!avatar) {
-        throw new ApiError(400, "Avatar file is required");
+        throw new ApiError(400, "Avatar file is required")
     }
 
-    User.create({
+
+    const user = await User.create({
         fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || "",
         email,
         password,
-        username: username.tLowerCase(),
-
+        userName: username.toLowerCase()
     })
 
-    const createdUser = User.findById(User._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
-    if (!createdUser) {
-        throw new ApiError(500, "something went wrong while registering the user");
-    }
 
+    //console.log("req.files:", req.files);
+
+    if (!createdUser) {
+        throw new ApiError(500, "Something went wrong while registering the user")
+    }
+    //console.log("Current working directory:", process.cwd());
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered Successfully")
-    )
-})
 
+    )
+    console.log("req.files:", req.files);
+
+})
 export { registerUser }
