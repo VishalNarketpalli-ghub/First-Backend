@@ -90,3 +90,11 @@ userSchema.methods.generateRefreshToken = function () {
 }
 
 export const User = mongoose.model("User", userSchema)
+
+/*
+access token: short lived, more secure, sent with every request
+refresh token: long lived, less secure, used to get new access token
+in real word applications these tokens are separated and stored differently
+first time i login both tokens are sent to the client 
+before expiry of refresh token if user tries to login again we dont ask the user to login, we just send a new access token
+*/
